@@ -18,19 +18,21 @@ from app.resources import strings
 from app.services.items import check_user_can_modify_item
 
 
-def get_items_filters(
-    tag: Optional[str] = None,
-    seller: Optional[str] = None,
-    favorited: Optional[str] = None,
-    limit: int = Query(DEFAULT_ITEMS_LIMIT, ge=1),
-    offset: int = Query(DEFAULT_ITEMS_OFFSET, ge=0),
+async def get_items_filters(
+    limit: int = Query(20),
+    offset: int = Query(0),
+    tag: Optional[str] = Query(None),
+    seller: Optional[str] = Query(None),
+    favorited: Optional[str] = Query(None),
+    title: Optional[str] = Query(None),
 ) -> ItemsFilters:
     return ItemsFilters(
+        limit=limit,
+        offset=offset,
         tag=tag,
         seller=seller,
         favorited=favorited,
-        limit=limit,
-        offset=offset,
+        title=title,
     )
 
 

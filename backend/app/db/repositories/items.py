@@ -110,12 +110,13 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
                 seller_username=item.seller.username,
             )
 
-    async def filter_items(  # noqa: WPS211
+    async def filter_items(
         self,
         *,
         tag: Optional[str] = None,
         seller: Optional[str] = None,
         favorited: Optional[str] = None,
+        title: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
         requested_user: Optional[User] = None,
@@ -209,6 +210,16 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
             )
             # fmt: on
 
+        if title:
+            query_params.append(title)
+            query_params_count += 1
+
+            # fmt: off
+            query = query.where(
+                items.title.ilike(Parameter(query_params_count).concat('%'))
+            )
+            # fmt: on
+
         query = query.limit(Parameter(query_params_count + 1)).offset(
             Parameter(query_params_count + 2),
         )
@@ -220,29 +231,28 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
             await self.get_item_by_slug(slug=item_row['slug'], requested_user=requested_user)
             for item_row in items_rows
         ]
-
-    async def get_items_for_user_feed(
-        self,
-        *,
-        user: User,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> List[Item]:
-        items_rows = await queries.get_items_for_feed(
-            self.connection,
-            follower_username=user.username,
-            limit=limit,
-            offset=offset,
-        )
-        return [
-            await self._get_item_from_db_record(
-                item_row=item_row,
-                slug=item_row[SLUG_ALIAS],
-                seller_username=item_row[SELLER_USERNAME_ALIAS],
-                requested_user=user,
+        async def get_items_for_user_feed(
+            self,
+            *,
+            user: User,
+            limit: int = 20,
+            offset: int = 0,
+        ) -> List[Item]:
+            items_rows = await queries.get_items_for_feed(
+                self.connection,
+                follower_username=user.username,
+                limit=limit,
+                offset=offset,
             )
-            for item_row in items_rows
-        ]
+            return [
+                await self._get_item_from_db_record(
+                    item_row=item_row,
+                    slug=item_row[SLUG_ALIAS],
+                    seller_username=item_row[SELLER_USERNAME_ALIAS],
+                    requested_user=user,
+                )
+                for item_row in items_rows
+            ]
 
     async def get_item_by_slug(
         self,
