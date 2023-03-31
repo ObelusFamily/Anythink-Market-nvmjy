@@ -36,7 +36,6 @@ async def list_items(
 ) -> ListOfItemsInResponse:
     items = await items_repo.filter_items(
         tag=items_filters.tag,
-        title=items_filters.title, # Add title filter
         seller=items_filters.seller,
         favorited=items_filters.favorited,
         limit=items_filters.limit,
@@ -121,40 +120,3 @@ async def delete_item_by_slug(
     items_repo: ItemsRepository = Depends(get_repository(ItemsRepository)),
 ) -> None:
     await items_repo.delete_item(item=item)
-
-# Modify the ItemsFilters schema to include the title filter
-from pydantic import BaseModel
-
-class ItemsFilters(BaseModel):
-    tag: Optional[str] = None
-    title: Optional[str] = None # Add title filter
-    seller: Optional[str] = None
-    favorited: Optional[str] = None
-    limit: Optional[int] = 20
-    offset: Optional[int] = 0
-
-# Modify the ItemsRepository class to include the title filter in the query
-# (assuming you're using SQLAlchemy as the ORM)
-from sqlalchemy import and_
-
-class ItemsRepository:
-    # Other methods remain unchanged
-
-    async def filter_items(self, *, tag: Optional[str], title: Optional[str], seller: Optional[str], favorited: Optional[str], limit: int, offset: int, requested_user: Optional[User]) -> List[Item]:
-        query = self.items.select().offset(offset).limit(limit)
-
-        conditions = []
-
-        if tag:
-            conditions.append(self.items.c.tags.any(tag))
-        if title:
-            conditions.append(self.items.c.title.ilike(f"%{title}%")) # Add title filter
-        if seller:
-            conditions.append(self.items.c.seller == seller)
-        if favorited:
-            conditions.append(self.items.c.id.in_(requested_user.favorite_items))
-
-        if conditions:
-            query = query.where(and_(*conditions))
-
-        return await self.database.fetch_all(query)
